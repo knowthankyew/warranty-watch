@@ -14,11 +14,11 @@ export function generateDisputeLetter(
   const illegalFlags = analysis.redFlags.filter(rf => rf.severity === 'illegal');
 
   let statutoryReferences = `- Federal Magnuson-Moss Warranty Act, 15 U.S.C. § 2301 et seq.
-- Uniform Commercial Code (UCC § 2-314) Implied Warranty of Merchantability
-- ${stateLaw.stateName} State Law (${stateLaw.statuteRef})`;
+- Uniform Commercial Code (U.C.C. § 2-608 & § 2-314) Implied Warranty of Merchantability
+- ${stateLaw.stateName} State Statutory Authorities (${stateLaw.statuteRef})`;
 
   if (analysis.magnusonMossCompliance.hasIllegalVoidIf) {
-    statutoryReferences += `\n- 15 U.S.C. § 2302(c) & FTC Warning Guidance regarding unlawful anti-tampering sticker/seal conditions.`;
+    statutoryReferences += `\n- 15 U.S.C. § 2302(c) & FTC Enforcement Guidance regarding unlawful anti-tampering sticker/seal conditions.`;
   }
   if (analysis.magnusonMossCompliance.hasIllegalTieIn) {
     statutoryReferences += `\n- 15 U.S.C. § 2302(c) Prohibition on mandatory third-party repair bans and brand-name tie-in sales.`;
@@ -77,7 +77,7 @@ Pursuant to federal law (15 U.S.C. § 2304) and ${stateLaw.stateName} statutes (
 
 DEMANDED REMEDY: ${data.demandedRemedy || 'Full Refund or Replacement'}
 
-Please be advised that under 15 U.S.C. § 2310(d)(2) of the Magnuson-Moss Warranty Act, as well as ${stateLaw.stateName} law, if a consumer prevails in an action to enforce rights under a written or implied warranty, the court MUST award the prevailing consumer all reasonable attorney fees and actual costs incurred in bringing the action.
+Please be advised that under 15 U.S.C. § 2310(d)(2) of the Magnuson-Moss Warranty Act, as well as applicable state statutes, courts are statutorily empowered to award prevailing consumers reasonable attorney fees and costs. In several jurisdictions, fee shifting is mandatory upon establishing willful non-compliance or breach of warranty.
 
 Please contact me at the phone number or email address provided above within 14 days to confirm arrangements for ${data.demandedRemedy.toLowerCase()}.
 

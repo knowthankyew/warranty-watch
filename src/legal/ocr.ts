@@ -16,6 +16,10 @@ export async function performClientSideOCR(
     }
 
     worker = await createWorker('eng', 1, {
+      workerPath: '/ocr/worker.min.js',
+      corePath: '/ocr/tesseract-core-lstm.wasm.js',
+      langPath: '/ocr/lang-data',
+      cacheMethod: 'none',
       logger: (m) => {
         if (onProgress && m.status) {
           let p = 0.2;

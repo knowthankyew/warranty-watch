@@ -27,7 +27,7 @@ export const ExecutiveSummary: React.FC<ExecutiveSummaryProps> = ({ result }) =>
         
         {/* Protection Score Donut / Gauge */}
         <div className="flex items-center space-x-5">
-          <div className="relative flex items-center justify-center">
+          <div className="relative flex items-center justify-center" role="meter" aria-valuenow={protectionScore} aria-valuemin={0} aria-valuemax={100} aria-label="Consumer Protection Rating Score">
             <svg className="w-24 h-24 transform -rotate-90">
               <circle
                 cx="48"

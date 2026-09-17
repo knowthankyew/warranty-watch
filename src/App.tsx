@@ -191,25 +191,31 @@ export function App() {
         <ExportModal analysis={analysisResult} onClose={() => setShowExportModal(false)} />
       )}
 
-      {/* Footer */}
+      {/* Footer with UPL Disclaimer */}
       <footer className="border-t border-slate-800 bg-slate-950 py-6 mt-12 text-xs text-slate-400">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
           
-          <div className="flex items-center space-x-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span className="font-semibold text-slate-300">WarrantyWatch</span>
-            <span>— Free Public Good (MIT License)</span>
+          <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl text-[11px] text-slate-400 leading-relaxed text-center sm:text-left">
+            <strong className="text-slate-300 font-semibold">Legal Disclaimer:</strong> WarrantyWatch is an automated informational and educational tool built as a local-first public good. It is not an attorney, law firm, or substitute for professional legal counsel. Use of this application does not establish an attorney-client relationship. Generated dispute letters and statutory breakdowns are self-help reference templates.
           </div>
 
-          <div className="flex items-center space-x-4 text-slate-400 text-[11px]">
-            <span className="flex items-center space-x-1">
-              <Lock className="w-3 h-3 text-emerald-400" />
-              <span>100% Client-Side Execution</span>
-            </span>
-            <span>•</span>
-            <span>Zero Network Telemetry</span>
-            <span>•</span>
-            <span>Magnuson-Moss Act 15 U.S.C. § 2301</span>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
+            <div className="flex items-center space-x-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span className="font-semibold text-slate-300">WarrantyWatch</span>
+              <span>— Free Public Good (MIT License)</span>
+            </div>
+
+            <div className="flex items-center space-x-4 text-slate-400 text-[11px]">
+              <span className="flex items-center space-x-1">
+                <Lock className="w-3 h-3 text-emerald-400" />
+                <span>100% Client-Side Execution</span>
+              </span>
+              <span>•</span>
+              <span>Zero Network Telemetry</span>
+              <span>•</span>
+              <span>Magnuson-Moss Act 15 U.S.C. § 2301</span>
+            </div>
           </div>
 
         </div>
