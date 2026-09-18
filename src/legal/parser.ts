@@ -10,7 +10,7 @@ export function analyzeWarrantyText(text: string, productType: string = 'General
   let warrantyType: 'Full' | 'Limited' | 'Disclaimed / As-Is' | 'Unspecified' = 'Unspecified';
   if (/sold\s+"?as\s*is"?|no\s+warranty|without\s+warranty/i.test(cleanText)) {
     warrantyType = 'Disclaimed / As-Is';
-  } else if (/full\s+(one|two|three|five|1|2|3|5|10)?\s*(-|\s*)year\s+warranty|full\s+warranty/i.test(cleanText)) {
+  } else if (/full\s+(?:(?:\w+|\d+)(?:\s*\(\d+\))?\s*)?(-|\s*)year\s+warranty|full\s+warranty/i.test(cleanText)) {
     warrantyType = 'Full';
   } else if (/limited\s+warranty/i.test(cleanText)) {
     warrantyType = 'Limited';
@@ -18,7 +18,7 @@ export function analyzeWarrantyText(text: string, productType: string = 'General
 
   // 2. Extract Duration
   let extractedDuration = 'Not Explicitly Stated';
-  const durationMatch = cleanText.match(/(\d+|\b(one|two|three|four|five|ten|lifetime)\b)\s*(-|\s*)(year|month|day|yr|mth)s?\b/i);
+  const durationMatch = cleanText.match(/(\d+|\b(one|two|three|four|five|ten|lifetime)\b)(?:\s*\(\d+\))?\s*(-|\s*)(year|month|day|yr|mth)s?\b/i);
   if (durationMatch) {
     extractedDuration = durationMatch[0].replace(/-/g, ' ');
   } else if (/lifetime/i.test(cleanText)) {

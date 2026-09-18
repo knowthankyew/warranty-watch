@@ -24,7 +24,7 @@ export const MAGNUSON_MOSS_RULES: MagnusonMossRule[] = [
   },
   {
     id: 'third_party_repair_ban',
-    pattern: /(void\s+if\s+(repaired|serviced|opened|altered|modified)\s+by\s+(unauthorized|third\s*party|non-factory|anyone\s+other\s+than))|(must\s+use\s+only\s+genuine\s+brand\s+parts)|(void\s+if\s+non-oem\s+parts)/i,
+    pattern: /(void\s+if\s+(?:repaired|serviced|opened|altered|modified)(?:\s+or\s+\w+)*\s+by\s+(?:unauthorized|third\s*party|non-factory|anyone\s+other\s+than))|(must\s+use\s+only\s+genuine\s+(?:\w+\s+)?(?:parts|components|accessories))|(void\s+if\s+non-oem\s+parts)/i,
     title: 'Illegal Tie-In Sales & Third-Party Repair Ban',
     severity: 'illegal',
     statute: '15 U.S.C. § 2302(c)',
@@ -46,7 +46,7 @@ export const MAGNUSON_MOSS_RULES: MagnusonMossRule[] = [
   },
   {
     id: 'mandatory_registration_card',
-    pattern: /(must\s+(return|mail|submit)\s+(registration|warranty)\s+card)|(warranty\s+void\s+unless\s+registered\s+within)|(registration\s+required\s+for\s+coverage)/i,
+    pattern: /(must\s+(return|mail|submit)\s+(registration|warranty)\s+card)|(warranty\s+(?:is\s+)?void\s+unless\s+registered\s+within)|(registration\s+required\s+for\s+coverage)/i,
     title: 'Illegal Mandatory Registration Card Clause',
     severity: 'deceptive',
     statute: '16 C.F.R. § 700.7',

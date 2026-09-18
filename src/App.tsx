@@ -7,6 +7,7 @@ import { CoverageBreakdown } from './components/CoverageBreakdown';
 import { StateLemonLawCard } from './components/StateLemonLawCard';
 import { DisputeLetterGenerator } from './components/DisputeLetterGenerator';
 import { ExportModal } from './components/ExportModal';
+import { GroundedSourcesModal } from './components/GroundedSourcesModal';
 import { analyzeWarrantyText } from './legal/parser';
 import { SampleWarranty, LegalAnalysisResult } from './legal/types';
 import { SAMPLE_WARRANTIES } from './legal/sampleWarranties';
@@ -19,6 +20,7 @@ export function App() {
   const [analysisResult, setAnalysisResult] = useState<LegalAnalysisResult | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'redflags' | 'coverage' | 'lemonlaw' | 'dispute'>('overview');
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
+  const [showSourcesModal, setShowSourcesModal] = useState<boolean>(false);
 
   // Trigger Legal Analysis
   const handleAnalyze = () => {
@@ -55,11 +57,22 @@ export function App() {
     setInputText('');
   };
 
+  const handleBurnData = () => {
+    setAnalysisResult(null);
+    setInputText('');
+    setActiveTab('overview');
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
       
       {/* Top Header Navigation */}
-      <Header onSelectSample={handleSelectSample} onReset={handleReset} />
+      <Header
+        onSelectSample={handleSelectSample}
+        onReset={handleReset}
+        onOpenSources={() => setShowSourcesModal(true)}
+        onBurnData={handleBurnData}
+      />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
@@ -190,6 +203,13 @@ export function App() {
       {showExportModal && analysisResult && (
         <ExportModal analysis={analysisResult} onClose={() => setShowExportModal(false)} />
       )}
+
+      {/* Grounded Sources Modal */}
+      <GroundedSourcesModal
+        isOpen={showSourcesModal}
+        onClose={() => setShowSourcesModal(false)}
+        selectedState={selectedState}
+      />
 
       {/* Footer with UPL Disclaimer */}
       <footer className="border-t border-slate-800 bg-slate-950 py-6 mt-12 text-xs text-slate-400">
