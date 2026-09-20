@@ -1,0 +1,32 @@
+{
+  "$schema": "../schemas/warranty-policy.schema.json",
+  "jurisdiction": {
+    "code": "NJ",
+    "name": "New Jersey",
+    "type": "state"
+  },
+  "metadata": {
+    "version": "2026.1",
+    "effectiveDate": "2026-01-01",
+    "lastAudited": "2026-09-01",
+    "statuteRef": "N.J.S.A. 56:12-29 (Vehicles) & N.J.S.A. 56:8-1 (Consumer Fraud Act)",
+    "officialSourceUrl": "https://www.njconsumeraffairs.gov/"
+  },
+  "lemonLaw": {
+    "repairAttemptsThreshold": 3,
+    "daysOutOfServiceThreshold": 20,
+    "safetyDefectAttemptsThreshold": 1,
+    "coveragePeriod": "2 years / 24,000 miles (Vehicles) | Express Warranty Window (Consumer Goods)",
+    "impliedWarrantyWaivable": false,
+    "remedies": [
+      "Full Refund",
+      "Replacement Product",
+      "Mandatory Treble Damages & Counsel Fees"
+    ],
+    "attorneyFeesShift": true,
+    "specialRules": [
+      "New Jersey Consumer Fraud Act authorizes treble damages for deceptive warranty practices.",
+      "20 cumulative days out of service triggers statutory lemon protections for vehicles."
+    ]
+  }
+}

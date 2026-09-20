@@ -1,0 +1,32 @@
+{
+  "$schema": "../schemas/warranty-policy.schema.json",
+  "jurisdiction": {
+    "code": "NY",
+    "name": "New York",
+    "type": "state"
+  },
+  "metadata": {
+    "version": "2026.1",
+    "effectiveDate": "2026-01-01",
+    "lastAudited": "2026-09-01",
+    "statuteRef": "N.Y. Gen. Bus. Law § 198-a (New Car) & U.C.C. § 2-608 (Consumer Goods)",
+    "officialSourceUrl": "https://ag.ny.gov/"
+  },
+  "lemonLaw": {
+    "repairAttemptsThreshold": 4,
+    "daysOutOfServiceThreshold": 30,
+    "safetyDefectAttemptsThreshold": 2,
+    "coveragePeriod": "2 years / 18,000 miles (Vehicles) | Express Warranty Window (Consumer Goods)",
+    "impliedWarrantyWaivable": false,
+    "remedies": [
+      "Full Refund including taxes & fees",
+      "Replacement Product",
+      "Attorney Fees & Costs"
+    ],
+    "attorneyFeesShift": true,
+    "specialRules": [
+      "N.Y. Gen. Bus. Law § 349 prohibits deceptive warranty practices for general consumer goods.",
+      "U.C.C. § 2-608 authorizes revocation of acceptance when non-conformity substantially impairs value."
+    ]
+  }
+}

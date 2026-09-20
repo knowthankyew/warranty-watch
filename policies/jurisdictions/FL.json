@@ -1,0 +1,32 @@
+{
+  "$schema": "../schemas/warranty-policy.schema.json",
+  "jurisdiction": {
+    "code": "FL",
+    "name": "Florida",
+    "type": "state"
+  },
+  "metadata": {
+    "version": "2026.1",
+    "effectiveDate": "2026-01-01",
+    "lastAudited": "2026-09-01",
+    "statuteRef": "Fla. Stat. § 681.102 (Motor Vehicles) & U.C.C. § 672.608 (Consumer Goods)",
+    "officialSourceUrl": "http://myfloridalegal.com/"
+  },
+  "lemonLaw": {
+    "repairAttemptsThreshold": 3,
+    "daysOutOfServiceThreshold": 15,
+    "safetyDefectAttemptsThreshold": 1,
+    "coveragePeriod": "24 months (Vehicles) | Express Warranty Window (Consumer Goods)",
+    "impliedWarrantyWaivable": true,
+    "remedies": [
+      "Full Refund of purchase price",
+      "Replacement Product",
+      "Attorney Fees & Costs"
+    ],
+    "attorneyFeesShift": true,
+    "specialRules": [
+      "15 days out of service threshold triggers lemon presumption for motor vehicles.",
+      "General consumer goods governed by Fla. Stat. § 501.201 (FDUTPA) and UCC Article 2."
+    ]
+  }
+}

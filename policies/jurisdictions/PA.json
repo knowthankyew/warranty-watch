@@ -1,0 +1,31 @@
+{
+  "$schema": "../schemas/warranty-policy.schema.json",
+  "jurisdiction": {
+    "code": "PA",
+    "name": "Pennsylvania",
+    "type": "state"
+  },
+  "metadata": {
+    "version": "2026.1",
+    "effectiveDate": "2026-01-01",
+    "lastAudited": "2026-09-01",
+    "statuteRef": "73 P.S. § 1951 (Vehicles) & 73 P.S. § 201-1 (Unfair Trade Practices)",
+    "officialSourceUrl": "https://www.attorneygeneral.gov/"
+  },
+  "lemonLaw": {
+    "repairAttemptsThreshold": 3,
+    "daysOutOfServiceThreshold": 30,
+    "safetyDefectAttemptsThreshold": 1,
+    "coveragePeriod": "1 year / 12,000 miles (Vehicles) | Express Warranty Window (Consumer Goods)",
+    "impliedWarrantyWaivable": true,
+    "remedies": [
+      "Full Refund",
+      "Replacement Unit",
+      "Attorney Fees & Costs"
+    ],
+    "attorneyFeesShift": true,
+    "specialRules": [
+      "Manufacturer must pay all statutory fees and consumer costs upon prevailing."
+    ]
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "$schema": "../schemas/warranty-policy.schema.json",
+  "jurisdiction": {
+    "code": "WA",
+    "name": "Washington",
+    "type": "state"
+  },
+  "metadata": {
+    "version": "2026.1",
+    "effectiveDate": "2026-01-01",
+    "lastAudited": "2026-09-01",
+    "statuteRef": "RCW 19.118 (Vehicles) & RCW 19.86 (Consumer Protection Act)",
+    "officialSourceUrl": "https://www.atg.wa.gov/lemon-law"
+  },
+  "lemonLaw": {
+    "repairAttemptsThreshold": 4,
+    "daysOutOfServiceThreshold": 30,
+    "safetyDefectAttemptsThreshold": 2,
+    "coveragePeriod": "2 years / 24,000 miles (Vehicles) | Express Warranty Window (Consumer Goods)",
+    "impliedWarrantyWaivable": false,
+    "remedies": [
+      "Full Refund",
+      "Replacement",
+      "Attorney Fees & Statutory Costs"
+    ],
+    "attorneyFeesShift": true,
+    "specialRules": [
+      "Washington Consumer Protection Act provides enhanced remedies for unlawful warranty disclaimers."
+    ]
+  }
+}

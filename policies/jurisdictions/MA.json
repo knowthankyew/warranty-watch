@@ -1,0 +1,32 @@
+{
+  "$schema": "../schemas/warranty-policy.schema.json",
+  "jurisdiction": {
+    "code": "MA",
+    "name": "Massachusetts",
+    "type": "state"
+  },
+  "metadata": {
+    "version": "2026.1",
+    "effectiveDate": "2026-01-01",
+    "lastAudited": "2026-09-01",
+    "statuteRef": "M.G.L. c. 90 § 7N1/2 (Vehicles), c. 106 § 2-316A & c. 93A (Consumer Goods)",
+    "officialSourceUrl": "https://www.mass.gov/lemon-laws"
+  },
+  "lemonLaw": {
+    "repairAttemptsThreshold": 3,
+    "daysOutOfServiceThreshold": 15,
+    "safetyDefectAttemptsThreshold": 1,
+    "coveragePeriod": "1 year / 15,000 miles (Vehicles) | Express Warranty Window (Consumer Goods)",
+    "impliedWarrantyWaivable": false,
+    "remedies": [
+      "Full Refund",
+      "Replacement Unit",
+      "Double to Treble Damages under Ch. 93A"
+    ],
+    "attorneyFeesShift": true,
+    "specialRules": [
+      "M.G.L. c. 106 § 2-316A strictly bans ANY disclaimer of implied warranties of merchantability for consumer goods.",
+      "Formal 93A demand letter can trigger double to treble statutory damages for refusal to honor valid warranty."
+    ]
+  }
+}

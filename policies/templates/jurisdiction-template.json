@@ -1,0 +1,31 @@
+{
+  "$schema": "../schemas/warranty-policy.schema.json",
+  "jurisdiction": {
+    "code": "XX",
+    "name": "State Name",
+    "type": "state"
+  },
+  "metadata": {
+    "version": "2026.1",
+    "effectiveDate": "2026-01-01",
+    "lastAudited": "2026-09-01",
+    "statuteRef": "State Lemon Law Statute § ...",
+    "officialSourceUrl": "https://..."
+  },
+  "lemonLaw": {
+    "repairAttemptsThreshold": 3,
+    "daysOutOfServiceThreshold": 30,
+    "safetyDefectAttemptsThreshold": 1,
+    "coveragePeriod": "1–2 years / 18,000 miles",
+    "impliedWarrantyWaivable": false,
+    "remedies": [
+      "Full Refund",
+      "Replacement Unit",
+      "Attorney Fees & Costs"
+    ],
+    "attorneyFeesShift": true,
+    "specialRules": [
+      "Statutory presumption rules and consumer protections."
+    ]
+  }
+}

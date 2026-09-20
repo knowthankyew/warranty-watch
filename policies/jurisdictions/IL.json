@@ -1,0 +1,31 @@
+{
+  "$schema": "../schemas/warranty-policy.schema.json",
+  "jurisdiction": {
+    "code": "IL",
+    "name": "Illinois",
+    "type": "state"
+  },
+  "metadata": {
+    "version": "2026.1",
+    "effectiveDate": "2026-01-01",
+    "lastAudited": "2026-09-01",
+    "statuteRef": "815 ILCS 380/ (Vehicles) & 815 ILCS 505/ (Consumer Fraud Act)",
+    "officialSourceUrl": "https://www.illinoisattorneygeneral.gov/"
+  },
+  "lemonLaw": {
+    "repairAttemptsThreshold": 4,
+    "daysOutOfServiceThreshold": 30,
+    "safetyDefectAttemptsThreshold": 2,
+    "coveragePeriod": "1 year / 12,000 miles (Vehicles) | Express Warranty Window (Consumer Goods)",
+    "impliedWarrantyWaivable": true,
+    "remedies": [
+      "Full Refund",
+      "Replacement Product",
+      "Attorney Fees"
+    ],
+    "attorneyFeesShift": true,
+    "specialRules": [
+      "Presumption applies if defect continues after 4 repair attempts or 30 cumulative calendar days."
+    ]
+  }
+}

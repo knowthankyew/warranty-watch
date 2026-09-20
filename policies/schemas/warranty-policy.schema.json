@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://knowthankyew.org/schemas/v1/warranty-policy.schema.json",
+  "title": "WarrantyAndLemonLawPolicyPack",
+  "description": "Declarative policy schema for consumer warranties, Magnuson-Moss rules, and state lemon laws",
+  "type": "object",
+  "required": [
+    "jurisdiction",
+    "metadata"
+  ],
+  "properties": {
+    "jurisdiction": {
+      "type": "object",
+      "required": ["code", "name", "type"],
+      "properties": {
+        "code": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["federal", "state"] }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["version", "statuteRef"],
+      "properties": {
+        "version": { "type": "string" },
+        "effectiveDate": { "type": "string" },
+        "lastAudited": { "type": "string" },
+        "statuteRef": { "type": "string" },
+        "officialSourceUrl": { "type": "string" }
+      }
+    },
+    "federalRules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "pattern",
+          "title",
+          "severity",
+          "statute",
+          "lawName",
+          "explanation",
+          "enforceability",
+          "consumerAdvice"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "pattern": { "type": "string" },
+          "title": { "type": "string" },
+          "severity": { "type": "string", "enum": ["illegal", "deceptive", "caution"] },
+          "statute": { "type": "string" },
+          "lawName": { "type": "string" },
+          "explanation": { "type": "string" },
+          "enforceability": { "type": "string" },
+          "consumerAdvice": { "type": "string" }
+        }
+      }
+    },
+    "lemonLaw": {
+      "type": "object",
+      "required": [
+        "repairAttemptsThreshold",
+        "daysOutOfServiceThreshold",
+        "safetyDefectAttemptsThreshold",
+        "coveragePeriod",
+        "impliedWarrantyWaivable",
+        "remedies",
+        "attorneyFeesShift",
+        "specialRules"
+      ],
+      "properties": {
+        "repairAttemptsThreshold": { "type": "number", "minimum": 1 },
+        "daysOutOfServiceThreshold": { "type": "number", "minimum": 1 },
+        "safetyDefectAttemptsThreshold": { "type": "number", "minimum": 1 },
+        "coveragePeriod": { "type": "string" },
+        "impliedWarrantyWaivable": { "type": "boolean" },
+        "remedies": { "type": "array", "items": { "type": "string" } },
+        "attorneyFeesShift": { "type": "boolean" },
+        "specialRules": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "$schema": "../schemas/warranty-policy.schema.json",
+  "jurisdiction": {
+    "code": "CA",
+    "name": "California",
+    "type": "state"
+  },
+  "metadata": {
+    "version": "2026.1",
+    "effectiveDate": "2026-01-01",
+    "lastAudited": "2026-09-01",
+    "statuteRef": "Cal. Civ. Code § 1793.22 (Tanner Consumer Protection Act) & § 1790 et seq. (Song-Beverly)",
+    "officialSourceUrl": "https://leginfo.legislature.ca.gov/"
+  },
+  "lemonLaw": {
+    "repairAttemptsThreshold": 4,
+    "daysOutOfServiceThreshold": 30,
+    "safetyDefectAttemptsThreshold": 2,
+    "coveragePeriod": "18 months / 18,000 miles (Vehicles) | Express Warranty Window (Consumer Goods)",
+    "impliedWarrantyWaivable": false,
+    "remedies": [
+      "Full Refund (minus reasonable offset)",
+      "Replacement Unit/Vehicle",
+      "Mandatory Attorney Fee & Cost Shift"
+    ],
+    "attorneyFeesShift": true,
+    "specialRules": [
+      "Song-Beverly Act extends non-waivable implied warranty protections to ALL consumer goods in California.",
+      "Prevailing consumers recover 100% of reasonable attorney fees and costs under Cal. Civ. Code § 1794(d).",
+      "Civil penalty up to 2x actual damages for willful failure to repair or repurchase."
+    ]
+  }
+}

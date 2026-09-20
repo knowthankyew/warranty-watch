@@ -1,0 +1,31 @@
+{
+  "$schema": "../schemas/warranty-policy.schema.json",
+  "jurisdiction": {
+    "code": "TX",
+    "name": "Texas",
+    "type": "state"
+  },
+  "metadata": {
+    "version": "2026.1",
+    "effectiveDate": "2026-01-01",
+    "lastAudited": "2026-09-01",
+    "statuteRef": "Tex. Occ. Code § 2301.601 (Vehicles) & Tex. Bus. & Com. Code § 17.41 (DTPA)",
+    "officialSourceUrl": "https://www.txdmv.gov/motorists/consumer-protection/lemon-law"
+  },
+  "lemonLaw": {
+    "repairAttemptsThreshold": 4,
+    "daysOutOfServiceThreshold": 30,
+    "safetyDefectAttemptsThreshold": 2,
+    "coveragePeriod": "2 years / 24,000 miles (Vehicles) | Express Warranty Window (Consumer Goods)",
+    "impliedWarrantyWaivable": true,
+    "remedies": [
+      "Refund (minus usage deduction)",
+      "Replacement Product",
+      "Incidental Expenses & DTPA Damages"
+    ],
+    "attorneyFeesShift": true,
+    "specialRules": [
+      "Texas Deceptive Trade Practices Act (DTPA) provides enhanced remedies for unconscionable warranty disclaimers."
+    ]
+  }
+}
