@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, Sparkles, Loader2, MapPin, Tag } from 'lucide-react';
 import { ALL_US_STATES } from '../legal/lemonLaws';
 import { performClientSideOCR, OCRProgress } from '../legal/ocr';
+import { telemetry } from '../legal/telemetry';
 
 interface WarrantyInputProps {
   inputText: string;
@@ -197,7 +198,7 @@ export const WarrantyInput: React.FC<WarrantyInputProps> = ({
       {/* Action Button Bar */}
       <div className="flex items-center justify-between pt-1">
         <p className="text-xs text-slate-400 hidden sm:block">
-          Analyzes Magnuson-Moss 15 U.S.C. § 2302(c), FTC Rule 16 CFR § 700.7, and 50-state lemon rules.
+          {telemetry.getPrivacyClaims().dropzoneNotice}
         </p>
 
         <button

@@ -8,10 +8,12 @@ import { StateLemonLawCard } from './components/StateLemonLawCard';
 import { DisputeLetterGenerator } from './components/DisputeLetterGenerator';
 import { ExportModal } from './components/ExportModal';
 import { GroundedSourcesModal } from './components/GroundedSourcesModal';
+import { PrivacyAuditModal } from './components/PrivacyAuditModal';
 import { analyzeWarrantyText } from './legal/parser';
 import { SampleWarranty, LegalAnalysisResult } from './legal/types';
 import { SAMPLE_WARRANTIES } from './legal/sampleWarranties';
-import { ShieldCheck, Download, Lock } from 'lucide-react';
+import { telemetry } from './legal/telemetry';
+import { ShieldCheck, Download, Lock, AlertTriangle } from 'lucide-react';
 
 export function App() {
   const [inputText, setInputText] = useState<string>(SAMPLE_WARRANTIES[0].text);
@@ -21,24 +23,58 @@ export function App() {
   const [activeTab, setActiveTab] = useState<'overview' | 'redflags' | 'coverage' | 'lemonlaw' | 'dispute'>('overview');
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
   const [showSourcesModal, setShowSourcesModal] = useState<boolean>(false);
+  const [showPrivacyAuditModal, setShowPrivacyAuditModal] = useState<boolean>(false);
+
+  const claims = telemetry.getPrivacyClaims();
 
   // Trigger Legal Analysis
   const handleAnalyze = () => {
     if (!inputText.trim()) return;
+    const span = telemetry.startSpan('analyze_warranty', { product_type: productType, state: selectedState, char_count: inputText.length });
+    telemetry.recordAuditEvent('document_ingested', `Ingested warranty document (${inputText.length} chars)`, { product_type: productType, state: selectedState });
     const result = analyzeWarrantyText(inputText, productType, selectedState);
+    telemetry.recordAuditEvent('rules_evaluated', `Evaluated warranty against Magnuson-Moss and ${result.lemonLawInfo.stateName} lemon laws`, {
+      warranty_type: result.warrantyType,
+      protection_score: result.protectionScore,
+      redflag_count: result.redFlags.length,
+      is_compliant: result.magnusonMossCompliance.isCompliant,
+    });
+    span.end('OK', {
+      warranty_type: result.warrantyType,
+      protection_score: result.protectionScore,
+      redflag_count: result.redFlags.length,
+      is_compliant: result.magnusonMossCompliance.isCompliant,
+    });
     setAnalysisResult(result);
     setActiveTab('overview');
   };
 
   // Handle Preset Loading
   const handleSelectSample = (sample: SampleWarranty) => {
+    telemetry.restartSession();
     setInputText(sample.text);
-    if (sample.category.includes('Electronics')) setProductType(PRODUCT_CATEGORIES[0]);
-    else if (sample.category.includes('Automotive')) setProductType(PRODUCT_CATEGORIES[1]);
-    else if (sample.category.includes('Appliance')) setProductType(PRODUCT_CATEGORIES[2]);
-    else if (sample.category.includes('Tool')) setProductType(PRODUCT_CATEGORIES[3]);
+    let category = PRODUCT_CATEGORIES[0];
+    if (sample.category.includes('Electronics')) category = PRODUCT_CATEGORIES[0];
+    else if (sample.category.includes('Automotive')) category = PRODUCT_CATEGORIES[1];
+    else if (sample.category.includes('Appliance')) category = PRODUCT_CATEGORIES[2];
+    else if (sample.category.includes('Tool')) category = PRODUCT_CATEGORIES[3];
+    setProductType(category);
 
+    const span = telemetry.startSpan('analyze_warranty', { product_type: category, state: selectedState, char_count: sample.text.length });
+    telemetry.recordAuditEvent('document_ingested', `Loaded preset: ${sample.title}`, { product_type: category, state: selectedState });
     const result = analyzeWarrantyText(sample.text, sample.category, selectedState);
+    telemetry.recordAuditEvent('rules_evaluated', `Evaluated warranty against Magnuson-Moss and ${result.lemonLawInfo.stateName} lemon laws`, {
+      warranty_type: result.warrantyType,
+      protection_score: result.protectionScore,
+      redflag_count: result.redFlags.length,
+      is_compliant: result.magnusonMossCompliance.isCompliant,
+    });
+    span.end('OK', {
+      warranty_type: result.warrantyType,
+      protection_score: result.protectionScore,
+      redflag_count: result.redFlags.length,
+      is_compliant: result.magnusonMossCompliance.isCompliant,
+    });
     setAnalysisResult(result);
     setActiveTab('overview');
   };
@@ -47,17 +83,26 @@ export function App() {
   const handleStateChange = (newState: string) => {
     setSelectedState(newState);
     if (inputText.trim()) {
+      const span = telemetry.startSpan('analyze_warranty', { product_type: productType, state: newState, char_count: inputText.length });
       const result = analyzeWarrantyText(inputText, productType, newState);
+      span.end('OK', {
+        warranty_type: result.warrantyType,
+        protection_score: result.protectionScore,
+        redflag_count: result.redFlags.length,
+        is_compliant: result.magnusonMossCompliance.isCompliant,
+      });
       setAnalysisResult(result);
     }
   };
 
   const handleReset = () => {
+    telemetry.restartSession();
     setAnalysisResult(null);
     setInputText('');
   };
 
   const handleBurnData = () => {
+    telemetry.burn();
     setAnalysisResult(null);
     setInputText('');
     setActiveTab('overview');
@@ -66,11 +111,30 @@ export function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950">
       
+      {claims.isEnterpriseBuild && (
+        <div className="bg-amber-100 border-b-2 border-amber-500 text-amber-900 px-6 py-2 flex items-center justify-between text-xs font-medium z-50">
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <span>
+              <strong>Enterprise Mode:</strong> Telemetry exporter active ({claims.badgeLabel}). Operational metadata exported to <code className="bg-black/5 px-1 rounded">{claims.otlpEndpoint}</code>. Warranty texts strictly redacted.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowPrivacyAuditModal(true)}
+            className="px-2.5 py-1 text-xs font-semibold bg-amber-200 hover:bg-amber-300 text-amber-950 rounded transition-colors cursor-pointer"
+          >
+            Inspect Telemetry
+          </button>
+        </div>
+      )}
+
       {/* Top Header Navigation */}
       <Header
         onSelectSample={handleSelectSample}
         onReset={handleReset}
         onOpenSources={() => setShowSourcesModal(true)}
+        onOpenPrivacyAudit={() => setShowPrivacyAuditModal(true)}
         onBurnData={handleBurnData}
       />
 
@@ -211,30 +275,33 @@ export function App() {
         selectedState={selectedState}
       />
 
+      {/* Privacy & Telemetry Verification Modal */}
+      <PrivacyAuditModal
+        isOpen={showPrivacyAuditModal}
+        onClose={() => setShowPrivacyAuditModal(false)}
+        onBurnData={handleBurnData}
+      />
+
       {/* Footer with UPL Disclaimer */}
       <footer className="border-t border-slate-800 bg-slate-950 py-6 mt-12 text-xs text-slate-400">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
           
           <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl text-[11px] text-slate-400 leading-relaxed text-center sm:text-left">
-            <strong className="text-slate-300 font-semibold">Legal Disclaimer:</strong> WarrantyWatch is an automated informational and educational tool built as a local-first public good. It is not an attorney, law firm, or substitute for professional legal counsel. Use of this application does not establish an attorney-client relationship. Generated dispute letters and statutory breakdowns are self-help reference templates.
+            <strong className="text-slate-300 font-semibold">Legal Disclaimer:</strong> WarrantyWatch is an automated informational and educational tool built as a local-first public good. It is not an attorney, law firm, or substitute for professional legal counsel. Use of this application does not establish an attorney-client relationship. Generated dispute letters and statutory breakdowns are self-help reference templates. {claims.disclaimerExecutionText}
           </div>
 
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
             <div className="flex items-center space-x-2">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span className="font-semibold text-slate-300">WarrantyWatch</span>
-              <span>— Free Public Good (MIT License)</span>
+              <span className="font-semibold text-slate-300">WarrantyWatch{claims.appTitleSuffix}</span>
+              <span>— {claims.footerTitle}</span>
             </div>
 
             <div className="flex items-center space-x-4 text-slate-400 text-[11px]">
               <span className="flex items-center space-x-1">
                 <Lock className="w-3 h-3 text-emerald-400" />
-                <span>100% Client-Side Execution</span>
+                <span>{claims.footerSubtext}</span>
               </span>
-              <span>•</span>
-              <span>Zero Network Telemetry</span>
-              <span>•</span>
-              <span>Magnuson-Moss Act 15 U.S.C. § 2301</span>
             </div>
           </div>
 
