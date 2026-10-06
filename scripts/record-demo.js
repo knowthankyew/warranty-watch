@@ -54,8 +54,11 @@ async function sleep(ms) {
   await page.goto(activeUrl, { waitUntil: 'networkidle' });
   await sleep(1500);
 
-  console.log('Step 2: Showcasing 100% Offline & Private Badge...');
-  await page.hover('text=100% Offline & Private');
+  console.log('Step 2: Showcasing Privacy Badge...');
+  const privacyPill = await page.$('button[title*="telemetry"]');
+  if (privacyPill) {
+    await privacyPill.hover();
+  }
   await sleep(1000);
 
   console.log('Step 3: Hovering and selecting Laptop / Electronics Sample Preset...');
@@ -151,22 +154,31 @@ async function sleep(ms) {
   await sleep(2000);
 
   console.log('Closing browser context to finalize video recording...');
+  const video = page.video();
   await page.close();
   await context.close();
   await browser.close();
-  await sleep(1500);
 
-  // Locate the recorded WebM
-  const videoFiles = fs.readdirSync(tempVideoDir).filter((f) => f.endsWith('.webm'));
-  if (videoFiles.length === 0) {
-    console.error('❌ Error: No recorded WebM video found in temp folder.');
-    return;
+  let latestVideo = null;
+  if (video) {
+    try {
+      latestVideo = await video.path();
+    } catch (e) {
+      console.warn('video.path() wait failed:', e.message);
+    }
   }
-
-  const latestVideo = path.join(tempVideoDir, videoFiles[videoFiles.length - 1]);
+  if (!latestVideo || !fs.existsSync(latestVideo) || fs.statSync(latestVideo).size === 0) {
+    const videoFiles = fs.readdirSync(tempVideoDir).filter((f) => f.endsWith('.webm'));
+    if (videoFiles.length === 0) {
+      console.error('❌ Error: No recorded WebM video found in temp folder.');
+      return;
+    }
+    latestVideo = path.join(tempVideoDir, videoFiles[videoFiles.length - 1]);
+  }
 
   // Locate candidate ffmpeg binaries
   const candidateFfmpeg = [
+    '/Users/cl0rkster/Dev/gradcast/src/web/node_modules/ffmpeg-static/ffmpeg',
     '/Users/cl0rkster/Dev/ml/src/FtaaSService.Worker/.venv/lib/python3.12/site-packages/imageio_ffmpeg/binaries/ffmpeg-macos-x86_64-v7.1',
     '/opt/homebrew/bin/ffmpeg',
     '/usr/local/bin/ffmpeg',
