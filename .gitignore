@@ -9,3 +9,6 @@ build
 # Logs & temp
 *.log
 .DS_Store
+
+# Agent Steering & Local Specs
+.kiro/
