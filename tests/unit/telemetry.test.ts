@@ -1,6 +1,16 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TelemetryManager } from '../../src/legal/telemetry';
-import { terminateOcrWorker } from '../../src/legal/ocr';
+import { terminateOcrWorker, performClientSideOCR } from '../../src/legal/ocr';
+
+const mockTerminate = vi.fn().mockResolvedValue(undefined);
+const mockRecognize = vi.fn();
+
+vi.mock('tesseract.js', () => ({
+  createWorker: vi.fn(async () => ({
+    recognize: mockRecognize,
+    terminate: mockTerminate,
+  })),
+}));
 
 describe('WarrantyWatch TelemetryManager & Privacy Invariants', () => {
   let tm: TelemetryManager;
@@ -143,5 +153,24 @@ describe('WarrantyWatch TelemetryManager & Privacy Invariants', () => {
 
   it('terminates OCR workers safely without throwing errors', async () => {
     await expect(terminateOcrWorker()).resolves.toBeUndefined();
+
+    let resolveRecognize: ((val: unknown) => void) | undefined;
+    mockRecognize.mockImplementationOnce(() => new Promise((resolve) => {
+      resolveRecognize = resolve;
+    }));
+
+    const dummyBlob = new Blob(['sample-image'], { type: 'image/png' });
+    const ocrPromise = performClientSideOCR(dummyBlob);
+
+    // Allow worker initialization and enter recognize
+    await new Promise((r) => setTimeout(r, 20));
+
+    await terminateOcrWorker();
+    if (resolveRecognize) {
+      resolveRecognize({ data: { text: 'should-be-purged' } });
+    }
+
+    await expect(ocrPromise).rejects.toThrow('OCR operation aborted due to memory purge.');
+    expect(mockTerminate).toHaveBeenCalled();
   });
 });

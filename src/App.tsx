@@ -103,10 +103,8 @@ export function App() {
   };
 
   const handleBurnData = async () => {
-    await terminateOcrWorker();
+    const cleanupPromises: Promise<unknown>[] = [terminateOcrWorker().catch(() => {})];
     telemetry.burn();
-
-    const cleanupPromises: Promise<unknown>[] = [];
 
     try {
       localStorage.clear();
