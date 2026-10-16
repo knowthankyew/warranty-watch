@@ -155,15 +155,23 @@ describe('WarrantyWatch TelemetryManager & Privacy Invariants', () => {
     await expect(terminateOcrWorker()).resolves.toBeUndefined();
 
     let resolveRecognize: ((val: unknown) => void) | undefined;
-    mockRecognize.mockImplementationOnce(() => new Promise((resolve) => {
-      resolveRecognize = resolve;
-    }));
+    let notifyRecognizeCalled!: () => void;
+    const recognizeStarted = new Promise<void>((resolve) => {
+      notifyRecognizeCalled = resolve;
+    });
+
+    mockRecognize.mockImplementationOnce(() => {
+      notifyRecognizeCalled();
+      return new Promise((resolve) => {
+        resolveRecognize = resolve;
+      });
+    });
 
     const dummyBlob = new Blob(['sample-image'], { type: 'image/png' });
     const ocrPromise = performClientSideOCR(dummyBlob);
 
-    // Allow worker initialization and enter recognize
-    await new Promise((r) => setTimeout(r, 20));
+    // Deterministically wait until recognition has started in-flight
+    await recognizeStarted;
 
     await terminateOcrWorker();
     if (resolveRecognize) {

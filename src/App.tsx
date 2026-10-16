@@ -127,39 +127,55 @@ export function App() {
       );
     }
 
-    if (
-      typeof window !== 'undefined' &&
-      'indexedDB' in window &&
-      typeof indexedDB.databases === 'function'
-    ) {
-      cleanupPromises.push(
-        indexedDB
-          .databases()
-          .then((dbs) => {
-            const deletions = dbs
-              .map((db) => db.name)
-              .filter((name): name is string => typeof name === 'string' && name.length > 0)
-              .map(
-                (name) =>
-                  new Promise<void>((resolve, reject) => {
-                    try {
-                      const req = indexedDB.deleteDatabase(name);
-                      req.onsuccess = () => resolve();
-                      req.onerror = () => reject(req.error || new Error(`Failed to delete database ${name}`));
-                      req.onblocked = () => reject(new Error(`IndexedDB delete blocked for ${name}`));
-                    } catch (err) {
-                      reject(err);
-                    }
-                  })
-              );
-            return Promise.allSettled(deletions);
+    if (typeof window !== 'undefined' && 'indexedDB' in window) {
+      const deleteDbByName = (name: string) =>
+        new Promise<void>((resolve, reject) => {
+          try {
+            const req = indexedDB.deleteDatabase(name);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error || new Error(`Failed to delete database ${name}`));
+            req.onblocked = () => reject(new Error(`IndexedDB delete blocked for ${name}`));
+          } catch (err) {
+            reject(err);
+          }
+        });
+
+      if (typeof indexedDB.databases === 'function') {
+        cleanupPromises.push(
+          indexedDB
+            .databases()
+            .then((dbs) => {
+              const names = dbs
+                .map((db) => db.name)
+                .filter((name): name is string => typeof name === 'string' && name.length > 0);
+              return Promise.allSettled(names.map((name) => deleteDbByName(name)));
+            })
+            .then((results) => {
+              const rejections = results.filter((r) => r.status === 'rejected');
+              if (rejections.length > 0) {
+                console.warn('Some IndexedDB deletions failed during purge:', rejections);
+              }
+            })
+        );
+      } else {
+        const knownDbs = ['warranty-watch', 'warranty-watch-storage', 'keyval-store'];
+        cleanupPromises.push(
+          Promise.allSettled(knownDbs.map((name) => deleteDbByName(name))).then((results) => {
+            const rejections = results.filter((r) => r.status === 'rejected');
+            if (rejections.length > 0) {
+              console.warn('Known IndexedDB database deletions reported issues:', rejections);
+            }
           })
-          .catch(() => {})
-      );
+        );
+      }
     }
 
     if (cleanupPromises.length > 0) {
-      await Promise.allSettled(cleanupPromises);
+      const results = await Promise.allSettled(cleanupPromises);
+      const failures = results.filter((r) => r.status === 'rejected');
+      if (failures.length > 0) {
+        console.warn('Data purge finished with some unhandled errors:', failures);
+      }
     }
 
     setAnalysisResult(null);

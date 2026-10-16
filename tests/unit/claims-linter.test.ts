@@ -53,10 +53,8 @@ describe('WarrantyWatch Claims & Privacy Invariant Linter (claims-linter.test.ts
 
   it('verifies Portfolio Master Brief parity if brief is present', () => {
     const errors: string[] = [];
-    const checked = auditPortfolioMasterBrief(errors);
-    if (checked) {
-      expect(errors).toEqual([]);
-    }
+    auditPortfolioMasterBrief(errors);
+    expect(errors).toEqual([]);
 
     // Negative test: brief required but missing
     const missingErrors: string[] = [];

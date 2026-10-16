@@ -137,10 +137,25 @@ export function auditZeroEgress(
   const telemetryPath = resolve(REPO_ROOT, 'src/legal/telemetry.ts');
   if (existsSync(telemetryPath)) {
     const telContent = readFileSync(telemetryPath, 'utf-8');
-    const prohibitedTelemetryKeys = ['warranty_text', 'customer_name', 'serial_number', 'purchase_receipt', 'address'];
-    for (const key of prohibitedTelemetryKeys) {
-      if (telContent.includes('WARRANTY_ALLOWLIST_KEYS') && telContent.includes(`'${key}'`)) {
-        errors.push(`Privacy violation in telemetry.ts: Prohibited sensitive key detected in allowlist: '${key}'`);
+
+    // Verify default memory_only mode and MemoryExporter usage
+    if (!telContent.includes('MemoryExporter')) {
+      errors.push('Telemetry integrity violation: src/legal/telemetry.ts does not reference or re-export MemoryExporter.');
+    }
+    if (!telContent.includes("'memory_only'")) {
+      errors.push("Telemetry integrity violation: src/legal/telemetry.ts does not declare 'memory_only' default telemetry mode.");
+    }
+
+    const setMatch = telContent.match(/WARRANTY_ALLOWLIST_KEYS[\s\S]*?=\s*new\s+Set\s*\(\s*\[([\s\S]*?)\]\s*\)/);
+    if (!setMatch) {
+      errors.push('Telemetry integrity violation: Could not parse WARRANTY_ALLOWLIST_KEYS Set literal in src/legal/telemetry.ts');
+    } else {
+      const keysInAllowlist = (setMatch[1].match(/['"`](.*?)['"`]/g) || []).map((s) => s.replace(/['"`]/g, ''));
+      const prohibitedTelemetryKeys = ['warranty_text', 'customer_name', 'serial_number', 'purchase_receipt', 'address'];
+      for (const key of prohibitedTelemetryKeys) {
+        if (keysInAllowlist.includes(key)) {
+          errors.push(`Privacy violation in telemetry.ts: Prohibited sensitive key detected in allowlist: '${key}'`);
+        }
       }
     }
   }
@@ -301,7 +316,8 @@ export function auditPortfolioMasterBrief(
     return false;
   }
 
-  const documentedCount = parseInt(match[1], 10);
+  const passedCount = parseInt(match[1], 10);
+  const totalCount = parseInt(match[2], 10);
   let actualCount = 0;
 
   const testsDir = resolve(REPO_ROOT, 'tests/unit');
@@ -309,12 +325,18 @@ export function auditPortfolioMasterBrief(
     const testFiles = readdirSync(testsDir).filter((f) => f.endsWith('.test.ts') || f.endsWith('.test.js'));
     for (const file of testFiles) {
       const code = readFileSync(resolve(testsDir, file), 'utf-8');
-      const itMatches = code.match(/(?<![\.\$a-zA-Z0-9_])(?:it|test)(?:\.only|\.skip)?\s*\(/g) || [];
+      const stripped = code
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, '')
+        .replace(/'(?:\\.|[^'\n\\])*'/g, "''")
+        .replace(/"(?:\\.|[^"\n\\])*"/g, '""')
+        .replace(/`(?:\\.|[^`\\])*`/g, '""');
+      const itMatches = stripped.match(/(?<![\.\$a-zA-Z0-9_])(?:it|test)(?:\.only|\.skip)?\s*\(/g) || [];
       actualCount += itMatches.length;
     }
   }
 
-  if (documentedCount !== actualCount) {
+  if (passedCount !== actualCount || totalCount !== actualCount) {
     errors.push(
       `Portfolio Brief Drift: KNOWTHANKYEW_PORTFOLIO_MASTER_BRIEF.md documents ${match[1]}/${match[2]} tests, but actual test suite has ${actualCount} tests.`
     );
