@@ -58,7 +58,7 @@ export function analyzeWarrantyText(text: string, productType: string = 'General
   });
 
   // State specific implied warranty override check (e.g. MA, MD, ME, MS, NJ, NY, etc.)
-  const stateLaw = getLemonLawForState(stateCode);
+  const stateLaw = getLemonLawForState(stateCode, productType);
   if (!stateLaw.impliedWarrantyWaivable && lowerText.includes('as is') && !hasImpliedDisclaimer) {
     redFlags.push({
       id: 'state_implied_override_' + stateCode,

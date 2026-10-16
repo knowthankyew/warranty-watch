@@ -60,7 +60,7 @@ describe('Warranty Dispute Letter Generator', () => {
 
     expect(letter).toContain('Texas');
     expect(letter).toContain('DEMANDED REMEDY: Full Refund');
-    expect(letter).toContain('Full Refund');
+    expect(letter).toContain('Tex. Occ. Code § 2301.601');
     expect(letter).toContain('U.C.C. § 2-608');
   });
 

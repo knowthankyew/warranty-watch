@@ -129,32 +129,35 @@ export function auditZeroEgress(
     }
   }
 
-  if (overrideCodeSnippets === null && existsSync(srcDir)) {
+  const hasOverride = overrideCodeSnippets !== null || overrideIndexContent !== null;
+  if (!hasOverride && existsSync(srcDir)) {
     scanFiles(srcDir);
   }
 
   // Check telemetry allowlist does not contain PII or raw warranty text
-  const telemetryPath = resolve(REPO_ROOT, 'src/legal/telemetry.ts');
-  if (existsSync(telemetryPath)) {
-    const telContent = readFileSync(telemetryPath, 'utf-8');
+  if (!hasOverride) {
+    const telemetryPath = resolve(REPO_ROOT, 'src/legal/telemetry.ts');
+    if (existsSync(telemetryPath)) {
+      const telContent = readFileSync(telemetryPath, 'utf-8');
 
-    // Verify default memory_only mode and MemoryExporter usage
-    if (!telContent.includes('MemoryExporter')) {
-      errors.push('Telemetry integrity violation: src/legal/telemetry.ts does not reference or re-export MemoryExporter.');
-    }
-    if (!telContent.includes("'memory_only'")) {
-      errors.push("Telemetry integrity violation: src/legal/telemetry.ts does not declare 'memory_only' default telemetry mode.");
-    }
+      // Verify default memory_only mode and MemoryExporter usage
+      if (!telContent.includes('MemoryExporter')) {
+        errors.push('Telemetry integrity violation: src/legal/telemetry.ts does not reference or re-export MemoryExporter.');
+      }
+      if (!telContent.includes("'memory_only'")) {
+        errors.push("Telemetry integrity violation: src/legal/telemetry.ts does not declare 'memory_only' default telemetry mode.");
+      }
 
-    const setMatch = telContent.match(/WARRANTY_ALLOWLIST_KEYS[\s\S]*?=\s*new\s+Set\s*\(\s*\[([\s\S]*?)\]\s*\)/);
-    if (!setMatch) {
-      errors.push('Telemetry integrity violation: Could not parse WARRANTY_ALLOWLIST_KEYS Set literal in src/legal/telemetry.ts');
-    } else {
-      const keysInAllowlist = (setMatch[1].match(/['"`](.*?)['"`]/g) || []).map((s) => s.replace(/['"`]/g, ''));
-      const prohibitedTelemetryKeys = ['warranty_text', 'customer_name', 'serial_number', 'purchase_receipt', 'address'];
-      for (const key of prohibitedTelemetryKeys) {
-        if (keysInAllowlist.includes(key)) {
-          errors.push(`Privacy violation in telemetry.ts: Prohibited sensitive key detected in allowlist: '${key}'`);
+      const setMatch = telContent.match(/WARRANTY_ALLOWLIST_KEYS[\s\S]*?=\s*new\s+Set\s*\(\s*\[([\s\S]*?)\]\s*\)/);
+      if (!setMatch) {
+        errors.push('Telemetry integrity violation: Could not parse WARRANTY_ALLOWLIST_KEYS Set literal in src/legal/telemetry.ts');
+      } else {
+        const keysInAllowlist = (setMatch[1].match(/['"`](.*?)['"`]/g) || []).map((s) => s.replace(/['"`]/g, ''));
+        const prohibitedTelemetryKeys = ['warranty_text', 'customer_name', 'serial_number', 'purchase_receipt', 'address'];
+        for (const key of prohibitedTelemetryKeys) {
+          if (keysInAllowlist.includes(key)) {
+            errors.push(`Privacy violation in telemetry.ts: Prohibited sensitive key detected in allowlist: '${key}'`);
+          }
         }
       }
     }
