@@ -302,29 +302,15 @@ export function auditPortfolioMasterBrief(
   }
 
   const documentedCount = parseInt(match[1], 10);
-  const vitestReportPath = resolve(REPO_ROOT, '.vitest/json/output.json');
   let actualCount = 0;
 
-  if (existsSync(vitestReportPath)) {
-    try {
-      const data = JSON.parse(readFileSync(vitestReportPath, 'utf-8'));
-      if (typeof data.numTotalTests === 'number') {
-        actualCount = data.numTotalTests;
-      }
-    } catch {
-      // Ignored: fallback below
-    }
-  }
-
-  if (actualCount === 0) {
-    const testsDir = resolve(REPO_ROOT, 'tests/unit');
-    if (existsSync(testsDir)) {
-      const testFiles = readdirSync(testsDir).filter((f) => f.endsWith('.test.ts') || f.endsWith('.test.js'));
-      for (const file of testFiles) {
-        const code = readFileSync(resolve(testsDir, file), 'utf-8');
-        const itMatches = code.match(/(?<![\.\$a-zA-Z0-9_])(?:it|test)(?:\.only|\.skip)?\s*\(/g) || [];
-        actualCount += itMatches.length;
-      }
+  const testsDir = resolve(REPO_ROOT, 'tests/unit');
+  if (existsSync(testsDir)) {
+    const testFiles = readdirSync(testsDir).filter((f) => f.endsWith('.test.ts') || f.endsWith('.test.js'));
+    for (const file of testFiles) {
+      const code = readFileSync(resolve(testsDir, file), 'utf-8');
+      const itMatches = code.match(/(?<![\.\$a-zA-Z0-9_])(?:it|test)(?:\.only|\.skip)?\s*\(/g) || [];
+      actualCount += itMatches.length;
     }
   }
 
