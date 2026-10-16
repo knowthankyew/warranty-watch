@@ -6,10 +6,15 @@ export interface OCRProgress {
 }
 
 const activeWorkers = new Set<any>();
+const pendingCreations = new Set<Promise<any>>();
 let burnGeneration = 0;
 
 export async function terminateOcrWorker(): Promise<void> {
   burnGeneration++;
+  const pending = Array.from(pendingCreations);
+  if (pending.length > 0) {
+    await Promise.allSettled(pending);
+  }
   const workersToTerminate = Array.from(activeWorkers);
   activeWorkers.clear();
   await Promise.allSettled(
@@ -34,7 +39,7 @@ export async function performClientSideOCR(
       onProgress({ status: 'Initializing client-side OCR engine...', progress: 0.1 });
     }
 
-    worker = await createWorker('eng', 1, {
+    const creationPromise = createWorker('eng', 1, {
       workerPath: '/ocr/worker.min.js',
       corePath: '/ocr/tesseract-core-lstm.wasm.js',
       langPath: '/ocr/lang-data',
@@ -53,10 +58,19 @@ export async function performClientSideOCR(
       }
     });
 
+    pendingCreations.add(creationPromise);
+    try {
+      worker = await creationPromise;
+    } finally {
+      pendingCreations.delete(creationPromise);
+    }
+
     if (burnGeneration !== initialGeneration) {
-      try {
-        await worker.terminate();
-      } catch {}
+      if (worker) {
+        try {
+          await worker.terminate();
+        } catch {}
+      }
       throw new Error('OCR operation aborted due to memory purge.');
     }
 

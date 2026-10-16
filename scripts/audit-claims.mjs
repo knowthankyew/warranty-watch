@@ -129,13 +129,12 @@ export function auditZeroEgress(
     }
   }
 
-  const hasOverride = overrideCodeSnippets !== null || overrideIndexContent !== null;
-  if (!hasOverride && existsSync(srcDir)) {
+  if (overrideCodeSnippets === null && existsSync(srcDir)) {
     scanFiles(srcDir);
   }
 
   // Check telemetry allowlist does not contain PII or raw warranty text
-  if (!hasOverride) {
+  if (overrideIndexContent === null) {
     const telemetryPath = resolve(REPO_ROOT, 'src/legal/telemetry.ts');
     if (existsSync(telemetryPath)) {
       const telContent = readFileSync(telemetryPath, 'utf-8');
