@@ -37,7 +37,7 @@ export function analyzeWarrantyText(text: string, productType: string = 'General
     if (match) {
       const quote = match[0].trim();
       redFlags.push({
-        id: rule.id + '_' + Math.random().toString(36).substr(2, 5),
+        id: rule.id + '_' + Math.random().toString(36).slice(2, 7),
         quote: quote.length > 120 ? quote.substring(0, 117) + '...' : quote,
         title: rule.title,
         severity: rule.severity,
@@ -136,7 +136,8 @@ export function analyzeWarrantyText(text: string, productType: string = 'General
   if (warrantyType === 'Limited') score -= 5;
   if (!laborMatch) score -= 10;
 
-  const protectionScore = Math.max(0, Math.min(100, Math.round(score)));
+  const numericScore = Number.isFinite(score) ? score : 0;
+  const protectionScore = Math.max(0, Math.min(100, Math.round(numericScore)));
 
   // Executive Summary text
   let summary = `This ${warrantyType.toLowerCase()} warranty was analyzed for ${productType} products in ${stateLaw.stateName}. `;

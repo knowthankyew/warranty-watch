@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TelemetryManager } from '../../src/legal/telemetry';
+import { terminateOcrWorker } from '../../src/legal/ocr';
 
 describe('WarrantyWatch TelemetryManager & Privacy Invariants', () => {
   let tm: TelemetryManager;
@@ -138,5 +139,9 @@ describe('WarrantyWatch TelemetryManager & Privacy Invariants', () => {
     expect(enterpriseClaims.dropzoneNotice).not.toContain('Zero Network');
     expect(enterpriseClaims.disclaimerExecutionText).not.toContain('zero remote network transmission');
     expect(enterpriseClaims.footerTitle).not.toContain('Air-Gapped');
+  });
+
+  it('terminates OCR workers safely without throwing errors', async () => {
+    await expect(terminateOcrWorker()).resolves.toBeUndefined();
   });
 });

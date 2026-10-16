@@ -45,4 +45,43 @@ No registration required.
     expect(result.magnusonMossCompliance.violationsCount).toBe(0);
     expect(result.protectionScore).toBeGreaterThanOrEqual(85);
   });
+
+  it('handles empty or whitespace text without crashing or producing NaN', () => {
+    const emptyResult = analyzeWarrantyText('', 'General', 'CA');
+    expect(emptyResult.warrantyType).toBe('Unspecified');
+    expect(emptyResult.extractedDuration).toBe('Not Explicitly Stated');
+    expect(emptyResult.protectionScore).toBeGreaterThanOrEqual(0);
+    expect(emptyResult.protectionScore).toBeLessThanOrEqual(100);
+    expect(Number.isFinite(emptyResult.protectionScore)).toBe(true);
+
+    const whitespaceResult = analyzeWarrantyText('   \n\t  ', 'Electronics', 'NY');
+    expect(whitespaceResult.warrantyType).toBe('Unspecified');
+    expect(Number.isFinite(whitespaceResult.protectionScore)).toBe(true);
+  });
+
+  it('clamps protection score within 0 to 100 even with extreme compounding violations', () => {
+    const egregiousText = `
+      SOLD AS IS WITHOUT ANY WARRANTY WHATSOEVER.
+      Manufacturer disclaims all implied warranties.
+      Warranty void if seal is broken or label removed.
+      Must use only genuine brand replacement parts. Void if repaired by unauthorized third party.
+      Must return registration card within 7 days.
+      Customer must pay all shipping and handling charges.
+      Labor not included.
+      Claim void if not reported immediately within 5 days of delivery.
+    `;
+    const result = analyzeWarrantyText(egregiousText, 'Electronics', 'CA');
+    expect(result.protectionScore).toBeGreaterThanOrEqual(0);
+    expect(result.protectionScore).toBeLessThanOrEqual(30);
+    expect(Number.isFinite(result.protectionScore)).toBe(true);
+  });
+
+  it('flags non-waivable implied warranty violation under Massachusetts law when AS IS is present', () => {
+    const asIsText = 'Equipment provided as is with limited 90 day parts coverage.';
+    const result = analyzeWarrantyText(asIsText, 'Appliances', 'MA');
+
+    expect(result.magnusonMossCompliance.hasImpliedDisclaimer).toBe(true);
+    expect(result.redFlags.some((rf) => rf.id.startsWith('state_implied_override_MA'))).toBe(true);
+    expect(result.lemonLawInfo.impliedWarrantyWaivable).toBe(false);
+  });
 });

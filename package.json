@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "audit:claims": "node scripts/audit-claims.mjs",
     "validate:policies": "node scripts/validate-policies.mjs",
     "record:demo": "bash scripts/record-demo.sh"
   },

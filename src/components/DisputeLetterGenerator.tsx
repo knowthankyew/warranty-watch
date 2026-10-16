@@ -40,7 +40,9 @@ export const DisputeLetterGenerator: React.FC<DisputeLetterGeneratorProps> = ({ 
       const safeText = letterText
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 
       printWindow.document.write(`
         <!DOCTYPE html>

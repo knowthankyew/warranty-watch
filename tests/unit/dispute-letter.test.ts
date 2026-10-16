@@ -34,4 +34,62 @@ describe('Warranty Dispute Letter Generator', () => {
     expect(letter).toContain('Apex ProBook 15');
     expect(letter).toContain('California');
   });
+
+  it('generates dispute letter for vehicle lemon law citing repair attempts and state statutes', () => {
+    const sample = SAMPLE_WARRANTIES[1]; // EV charger / automotive context
+    const analysis = analyzeWarrantyText(sample.text, 'Automotive', 'TX');
+
+    const letter = generateDisputeLetter(
+      {
+        consumerName: 'Alex Smith',
+        consumerAddress: '123 Pine St, Austin, TX 78701',
+        consumerPhoneEmail: 'alex@example.com',
+        companyName: 'Apex Motor Corp',
+        companyAddress: '400 Motor Way, Dallas, TX 75201',
+        productNameModel: 'Apex EV Charger Pro',
+        purchaseDate: 'January 15, 2026',
+        serialNumber: 'EV-554433',
+        purchasePrice: '$899.00',
+        stateCode: 'TX',
+        defectDescription: 'Thermal sensor failure during Level 2 charging.',
+        repairHistory: 'Four separate service visits over 45 calendar days.',
+        demandedRemedy: 'Full Refund',
+      },
+      analysis
+    );
+
+    expect(letter).toContain('Texas');
+    expect(letter).toContain('DEMANDED REMEDY: Full Refund');
+    expect(letter).toContain('Full Refund');
+    expect(letter).toContain('U.C.C. § 2-608');
+  });
+
+  it('safely falls back to default bracketed placeholders when form data is blank', () => {
+    const analysis = analyzeWarrantyText('Standard 1 year limited warranty.', 'General', 'FL');
+
+    const letter = generateDisputeLetter(
+      {
+        consumerName: '',
+        consumerAddress: '',
+        consumerPhoneEmail: '',
+        companyName: '',
+        companyAddress: '',
+        productNameModel: '',
+        purchaseDate: '',
+        serialNumber: '',
+        purchasePrice: '',
+        stateCode: 'FL',
+        defectDescription: '',
+        repairHistory: '',
+        demandedRemedy: 'Full Refund',
+      },
+      analysis
+    );
+
+    expect(letter).toContain('[Your Full Name]');
+    expect(letter).toContain('[Manufacturer / Seller Company Name]');
+    expect(letter).toContain('[Product Model Name]');
+    expect(letter).toContain('[Serial Number / Order #]');
+    expect(letter).toContain('Florida');
+  });
 });

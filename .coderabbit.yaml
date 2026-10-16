@@ -1,0 +1,92 @@
+# CodeRabbit Configuration for WarrantyWatch
+# Targeted Scope: Consumer Warranty & Product Manual Audit, Magnuson-Moss Act Statutory Compliance, State Lemon Laws, Air-Gapped Client-Side WASM OCR, Zero-Egress Privacy & Supply Chain Assurance
+
+language: "en-US"
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  sequence_diagrams: true
+  auto_review:
+    enabled: true
+    drafts: false
+
+  # Filter out compiled distributions, media files, demo recordings, and local caches
+  path_filters:
+    - "!**/*.mp4"
+    - "!**/*.gif"
+    - "!**/*.webm"
+    - "!**/*.png"
+    - "!**/*.svg"
+    - "!dist/**"
+    - "!node_modules/**"
+    - "!bom.json"
+    - "!dist/bom.json"
+    - "!demo.gif"
+    - "!demo.mp4"
+
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        You are performing an exhaustive architectural, security, mathematical, legal, and data privacy audit for "WarrantyWatch", an open-source, local-first legal analyzer evaluating consumer product warranties and manuals against the Magnuson-Moss Warranty Act (15 U.S.C. §§ 2301–2312), FTC Rule 16 C.F.R. § 700.7, state lemon laws, and U.C.C. implied warranty protections.
+
+        Evaluate all code against these non-negotiable architectural invariants:
+
+        1. ZERO WARRANTY DATA NETWORK TRANSMISSION & AIR-GAPPED PRIVACY (CRITICAL):
+           - In `src/**`, strictly prohibit network egress primitives (`fetch`, `XMLHttpRequest`, `navigator.sendBeacon`, WebSocket, external scripts/analytics). All warranty parsing, statutory matching, client-side OCR, and demand letter generation must execute 100% locally within the browser runtime.
+           - Enforce strict Content Security Policy (CSP) in `index.html` restricting `connect-src` to loopback and local OTLP endpoints (`'self' http://localhost:* http://127.0.0.1:* http://otel-collector:*`).
+           - In `src/legal/telemetry.ts`, verify telemetry runs in `memory_only` mode with `MemoryExporter` by default. Operational attributes must strictly adhere to `WARRANTY_ALLOWLIST_KEYS`. Raw warranty texts, serial numbers, customer names, or purchase receipts are strictly prohibited from telemetry spans or audit events.
+           - Nuclear Amnesia / "Burn Local Data": Ensure the instant purge command completely terminates active OCR workers (`terminateOcrWorker()`), wipes telemetry buffers (`telemetry.burn()`), and clears all client storage (`localStorage`, `sessionStorage`, `caches`, `indexedDB`).
+
+        2. MAGNUSON-MOSS STATUTORY COMPLIANCE & STATE LEMON LAWS:
+           - In `src/legal/magnusonMoss.ts`, `src/legal/parser.ts`, and `policies/jurisdictions/**`:
+             - 15 U.S.C. § 2302(c) (Anti-Tampering & Tie-In Sales Prohibition): Bans clauses conditioning warranty coverage on using branded replacement parts, authorized repair centers, or unbroken anti-tampering stickers ("Void if seal broken").
+             - 15 U.S.C. § 2304 (Federal Minimum Standards for Full Warranties): Mandates free remedy without charge, replacement or full refund after reasonable number of repair attempts, and no shipping fee burdens.
+             - 15 U.S.C. § 2308 (Implied Warranty Disclaimer Ban): Strictly prohibits disclaimers of implied warranties of merchantability and fitness when a written warranty is supplied or service contract entered into within 90 days.
+             - FTC Rule 16 C.F.R. § 700.7: Prohibits warranty clauses stating coverage is void or invalid unless a product registration card is mailed or registered online.
+             - State Lemon Laws & Non-Waivable Implied Warranties:
+               - Song-Beverly Consumer Warranty Act (Cal. Civ. Code §§ 1790–1795.8) & Tanner Consumer Protection Act.
+               - Massachusetts M.G.L. c. 106 § 2-316A (non-waivable implied warranties on consumer goods).
+               - Uniform Commercial Code U.C.C. § 2-608 (Revocation of Acceptance for non-conforming goods).
+             - Numeric Safety: Guard protection scores against `NaN`, negative bounds, or out-of-range scaling (0–100 clamp).
+
+        3. CLIENT-SIDE WASM OCR (TESSERACT.JS):
+           - In `src/legal/ocr.ts`:
+             - Tesseract OCR engine must load strictly local assets (`/ocr/worker.min.js`, `/ocr/tesseract-core-lstm.wasm.js`, `/ocr/lang-data`).
+             - Zero remote network calls to CDN or external language models.
+             - Worker instances must be cleanly terminated on task completion or upon invoking "Burn Local Data".
+
+        4. STATUTORY DISPUTE DEMAND LETTERS & UPL SAFE HARBORS:
+           - In `src/legal/disputeLetter.ts` and `src/components/DisputeLetterGenerator.tsx`:
+             - Generated dispute demand letters must accurately cite enforceable authorities: Magnuson-Moss 15 U.S.C. § 2301 et seq., § 2302(c), state lemon laws, and U.C.C. § 2-608.
+             - Verify rigorous HTML escaping (`&`, `<`, `>`, `"`, `'`) before rendering into print dialogs or printable windows to prevent XSS.
+             - Ensure non-waivable Unauthorized Practice of Law (UPL) legal disclaimers are prominently displayed in all generated documents and user interfaces.
+
+        5. TESTING & CLAIMS AUDITING:
+           - In `scripts/audit-claims.mjs` and `tests/unit/claims-linter.test.ts`, enforce static parity between documentation (`README.md`, `ARCHITECTURE.md`), statutory legal citations, and test inventories.
+           - Prohibit unprovable marketing adjectives ('bulletproof', 'conclusive', 'definitive', 'infinitely scalable').
+           - Verify that `KNOWTHANKYEW_PORTFOLIO_MASTER_BRIEF.md` test counts match actual test inventories.
+
+    - path: "src/legal/**"
+      instructions: "Audit core warranty parsing, statutory rule matching, lemon law lookups, OCR lifecycle, and dispute letter generation for numeric safety, ReDoS immunity, and zero network egress."
+
+    - path: "src/components/**"
+      instructions: "Audit React components for accessible UI controls (WCAG AA), screen reader announcements, secure input handling, HTML escaping, and nuclear amnesia data burning."
+
+    - path: "policies/**"
+      instructions: "Audit statutory warranty and lemon law policy packs and schema conformance across federal and 10 state jurisdictions."
+
+    - path: "tests/**"
+      instructions: "Audit test suites for edge-case coverage (empty texts, negative figures, OCR worker disposal, ReDoS immunity, and claims parity)."
+
+knowledge_base:
+  opt_out: false
+  learnings:
+    scope: "auto"
+  linked_repositories:
+    - repository: "knowthankyew/privacy-telemetry"
+      instructions: "Contains canonical zero-egress invariants, cryptographic evidence sealing standards, and privacy schemas for the KnowThankYew suite."
+    - repository: "knowthankyew/portfolio-admin"
+      instructions: "Contains portfolio integration standards, Master Brief assertions, and administrative compliance specifications."
