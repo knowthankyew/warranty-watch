@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useKTYHandoff } from '@knowthankyew/privacy-telemetry/react';
 import { Header } from './components/Header';
+import { HandoffBanner } from './components/HandoffBanner';
 import { WarrantyInput, PRODUCT_CATEGORIES } from './components/WarrantyInput';
 import { ExecutiveSummary } from './components/ExecutiveSummary';
 import { RedFlagsList } from './components/RedFlagsList';
@@ -10,6 +12,7 @@ import { ExportModal } from './components/ExportModal';
 import { GroundedSourcesModal } from './components/GroundedSourcesModal';
 import { PrivacyAuditModal } from './components/PrivacyAuditModal';
 import { analyzeWarrantyText } from './legal/parser';
+import { mapHandoffToWarrantyAnalysis } from './legal/handoff-adapter';
 import { SampleWarranty, LegalAnalysisResult } from './legal/types';
 import { SAMPLE_WARRANTIES } from './legal/sampleWarranties';
 import { telemetry } from './legal/telemetry';
@@ -27,6 +30,21 @@ export function App() {
   const [showPrivacyAuditModal, setShowPrivacyAuditModal] = useState<boolean>(false);
 
   const claims = telemetry.getPrivacyClaims();
+  const { payload: handoffPayload, isHandoffActive, clearHandoff } = useKTYHandoff('warranty-watch');
+  const handledPayloadRef = useRef<unknown>(null);
+
+  useEffect(() => {
+    if (handoffPayload && handledPayloadRef.current !== handoffPayload) {
+      handledPayloadRef.current = handoffPayload;
+      const result = mapHandoffToWarrantyAnalysis(handoffPayload, productType, selectedState);
+      setAnalysisResult(result);
+      setActiveTab('overview');
+      telemetry.recordAuditEvent('handoff_received', 'Received cross-engine handoff', {
+        findings_count: handoffPayload.findings.length,
+        risk_score: handoffPayload.riskScore,
+      });
+    }
+  }, [handoffPayload, productType, selectedState]);
 
   // Trigger Legal Analysis
   const handleAnalyze = () => {
@@ -105,6 +123,8 @@ export function App() {
   const handleBurnData = async () => {
     const cleanupPromises: Promise<unknown>[] = [terminateOcrWorker().catch(() => {})];
     telemetry.burn();
+    clearHandoff();
+    handledPayloadRef.current = null;
 
     try {
       localStorage.clear();
@@ -200,6 +220,18 @@ export function App() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
+        {/* Cross-Engine Handoff Banner */}
+        {isHandoffActive && handoffPayload && (
+          <HandoffBanner
+            payload={handoffPayload}
+            onClear={() => {
+              clearHandoff();
+              handledPayloadRef.current = null;
+              setAnalysisResult(null);
+            }}
+          />
+        )}
+
         {/* Input Section */}
         <section>
           <WarrantyInput
