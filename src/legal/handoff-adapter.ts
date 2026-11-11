@@ -11,7 +11,7 @@ export function mapHandoffToWarrantyAnalysis(
   productType = 'Electronics',
   stateCode = 'CA'
 ): LegalAnalysisResult {
-  const redFlags: RedFlag[] = payload.findings.map((f, idx) => {
+  const redFlags: RedFlag[] = (payload.findings || []).map((f, idx) => {
     let severity: SeverityLevel = 'caution';
     let enforceability: 'Unenforceable (Illegal)' | 'Highly Questionable' | 'Strictly Enforceable' = 'Highly Questionable';
     if (f.severity === 'CRITICAL') {
@@ -22,23 +22,25 @@ export function mapHandoffToWarrantyAnalysis(
       enforceability = 'Highly Questionable';
     }
 
+    const ruleKey = typeof f.ruleId === 'string' && f.ruleId.trim() ? f.ruleId.trim() : 'item';
     return {
-      id: `handoff-flag-${f.ruleId || idx + 1}`,
-      quote: f.matchedSnippet || f.title,
-      title: f.title,
+      id: `handoff-flag-${ruleKey}-${idx}`,
+      quote: f.matchedSnippet || f.title || 'Warranty clause',
+      title: f.title || 'Unspecified Warranty Term',
       severity,
-      statute: f.statuteCode,
-      lawName: f.statuteTitle,
-      explanation: f.explanation,
+      statute: f.statuteCode || 'Magnuson-Moss Statutory Standard',
+      lawName: f.statuteTitle || 'Consumer Warranty Protection',
+      explanation: f.explanation || 'Statutory review required under applicable warranty laws.',
       enforceability,
-      consumerAdvice: f.recommendation,
+      consumerAdvice: f.recommendation || 'Consult your state attorney general or consumer protection agency.',
     };
   });
 
   const illegalCount = redFlags.filter((r) => r.severity === 'illegal').length;
   const deceptiveCount = redFlags.filter((r) => r.severity === 'deceptive').length;
   const violationsCount = illegalCount + deceptiveCount;
-  const protectionScore = Math.max(0, Math.min(100, Math.round(100 - (payload.riskScore || 0))));
+  const rawScore = Number.isFinite(payload.riskScore) ? payload.riskScore : 0;
+  const protectionScore = Math.max(0, Math.min(100, Math.round(100 - rawScore)));
 
   const lemonLawInfo = getLemonLawForState(stateCode, productType);
 
