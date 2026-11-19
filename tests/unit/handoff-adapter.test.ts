@@ -1,107 +1,237 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import {
+  KtyHandoffPayload,
+  KTY_HANDOFF_SESSION_KEY,
+  validateHandoffPayload,
+} from '@knowthankyew/privacy-telemetry';
+import { useKTYHandoff } from '@knowthankyew/privacy-telemetry/react';
 import { mapHandoffToWarrantyAnalysis } from '../../src/legal/handoff-adapter';
-import { KtyHandoffPayload } from '@knowthankyew/privacy-telemetry';
 
-describe('WarrantyWatch Handoff Adapter', () => {
-  const samplePayload: KtyHandoffPayload = {
-    protocolVersion: '1.0.0',
-    origin: 'extension',
-    destinationTool: 'warranty-watch',
-    domain: 'electronics-store.example.com',
-    scanTimestamp: '2026-11-10T19:00:00Z',
-    riskScore: 65,
-    summary: 'Detected 2 unlawful warranty clauses',
+const reactHarness = vi.hoisted(() => {
+  const states: unknown[] = [];
+  let stateIndex = 0;
+  let pendingEffects: Array<() => void | (() => void)> = [];
+  let cleanups: Array<() => void> = [];
+
+  return {
+    reset() {
+      for (const cleanup of cleanups) cleanup();
+      states.length = 0;
+      stateIndex = 0;
+      pendingEffects = [];
+      cleanups = [];
+    },
+    renderHook<T>(hookFn: () => T): T {
+      stateIndex = 0;
+      pendingEffects = [];
+      let result = hookFn();
+      if (pendingEffects.length > 0) {
+        const effects = pendingEffects;
+        pendingEffects = [];
+        for (const eff of effects) {
+          const cleanup = eff();
+          if (typeof cleanup === 'function') cleanups.push(cleanup);
+        }
+        stateIndex = 0;
+        result = hookFn();
+      }
+      return result;
+    },
+    useState<T>(initial: T | (() => T)): [T, (next: T | ((prev: T) => T)) => void] {
+      const idx = stateIndex++;
+      if (!(idx in states)) {
+        states[idx] = typeof initial === 'function' ? (initial as () => T)() : initial;
+      }
+      const setState = (next: T | ((prev: T) => T)) => {
+        const prev = states[idx] as T;
+        states[idx] = typeof next === 'function' ? (next as (p: T) => T)(prev) : next;
+      };
+      return [states[idx] as T, setState];
+    },
+    useEffect(fn: () => void | (() => void)) {
+      pendingEffects.push(fn);
+    },
+    useCallback<T extends (...args: never[]) => unknown>(fn: T): T {
+      return fn;
+    },
+  };
+});
+
+vi.mock('react', () => ({
+  useState: reactHarness.useState,
+  useEffect: reactHarness.useEffect,
+  useCallback: reactHarness.useCallback,
+}));
+
+function createValidWarrantyPayload(overrides: Partial<KtyHandoffPayload> = {}): KtyHandoffPayload {
+  return {
+    version: '1.0',
+    originApp: 'knowthankyew-extension',
+    domain: 'megacorp-electronics.com',
+    scanTimestamp: '2026-11-10T12:00:00.000Z',
+    riskScore: 40,
+    summary: { critical: 1, warning: 0, info: 0 },
     findings: [
       {
-        ruleId: 'MM-TIE-IN-01',
-        title: 'Unlawful Tie-In Requirement',
-        statuteCode: '15 U.S.C. § 2302(c)',
-        statuteTitle: 'Magnuson-Moss Warranty Act § 102(c)',
+        ruleId: 'KTY-WARRANTY-VOID-001',
+        title: 'Illegal Void-If-Removed Warranty Sticker',
+        category: 'WARRANTY_DISCLAIMER',
         severity: 'CRITICAL',
-        category: 'WARRANTY_DISCLAIMER',
-        matchedSnippet: 'Warranty is void unless original manufacturer accessories are used exclusively.',
-        explanation: 'Conditioning warranty coverage on the use of branded articles violates federal law.',
-        recommendation: 'Remove restriction or cite FTC waiver.',
-      },
-      {
-        ruleId: 'MM-DISCLAIM-01',
-        title: 'As-Is Disclaimer of Implied Warranties',
-        statuteCode: '15 U.S.C. § 2308',
-        statuteTitle: 'Magnuson-Moss Warranty Act § 108',
-        severity: 'WARNING',
-        category: 'WARRANTY_DISCLAIMER',
-        matchedSnippet: 'All products sold as-is with all faults.',
-        explanation: 'Suppliers offering written warranties may not disclaim implied warranties of merchantability.',
-        recommendation: 'Ensure implied warranty coverage aligns with written warranty duration.',
+        statuteCode: '15 U.S.C. § 2302(c) / 16 C.F.R. § 700.10',
+        statuteTitle: 'Magnuson-Moss Anti-Tie-In & Repair Restriction',
+        matchedSnippet: 'Warranty is void if the factory seal is broken or repaired by a third party.',
+        explanation: 'Manufacturers cannot void warranties simply because a tamper seal was broken.',
+        recommendation: 'Assert your Magnuson-Moss rights and demand warranty service.',
       },
     ],
+    primaryLegalLink: null,
+    targetTool: 'warranty-watch',
+    ...overrides,
   };
+}
 
-  it('maps handoff payload into a grounded LegalAnalysisResult', () => {
-    const result = mapHandoffToWarrantyAnalysis(samplePayload, 'Electronics', 'CA');
+function stubHandoffGlobals(initialPayload?: KtyHandoffPayload) {
+  const store = new Map<string, string>();
+  if (initialPayload) {
+    store.set(KTY_HANDOFF_SESSION_KEY, JSON.stringify(initialPayload));
+  }
+  vi.stubGlobal('sessionStorage', {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => { store.set(k, v); },
+    removeItem: (k: string) => { store.delete(k); },
+  });
+  vi.stubGlobal('window', {
+    location: { search: '?kty_handoff=1', pathname: '/' },
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    history: { replaceState: vi.fn() },
+  });
+}
 
-    expect(result.productType).toBe('Electronics');
-    expect(result.stateCode).toBe('CA');
-    expect(result.protectionScore).toBe(35); // 100 - 65
-    expect(result.redFlags).toHaveLength(2);
+describe('WarrantyWatch Cross-Engine Handoff Adapter', () => {
+  beforeEach(() => {
+    reactHarness.reset();
+    vi.unstubAllGlobals();
+  });
 
-    const tieInFlag = result.redFlags[0];
-    expect(tieInFlag.severity).toBe('illegal');
-    expect(tieInFlag.statute).toBe('15 U.S.C. § 2302(c)');
-    expect(tieInFlag.enforceability).toBe('Unenforceable (Illegal)');
+  afterEach(() => {
+    reactHarness.reset();
+    vi.unstubAllGlobals();
+  });
 
-    expect(result.magnusonMossCompliance.hasIllegalTieIn).toBe(true);
-    expect(result.magnusonMossCompliance.hasImpliedDisclaimer).toBe(true);
+  it('validates fixture against KtyHandoffPayload and does not misclassify void-if-removed CRITICAL finding as Disclaimed / As-Is', () => {
+    const payload = createValidWarrantyPayload();
+    expect(validateHandoffPayload(payload)).toBe(true);
+
+    const result = mapHandoffToWarrantyAnalysis(payload, 'Electronics & Laptops', 'NY');
+
+    expect(result.productType).toBe('Electronics & Laptops');
+    expect(result.stateCode).toBe('NY');
+    expect(result.protectionScore).toBe(60);
+    expect(result.warrantyType).toBe('Unspecified');
     expect(result.magnusonMossCompliance.isCompliant).toBe(false);
-    expect(result.lemonLawInfo.stateCode).toBe('CA');
+    expect(result.magnusonMossCompliance.violationsCount).toBe(1);
+    expect(result.magnusonMossCompliance.hasIllegalVoidIf).toBe(true);
+    expect(result.magnusonMossCompliance.hasIllegalTieIn).toBe(false);
+    expect(result.redFlags).toHaveLength(1);
+    expect(result.redFlags[0].severity).toBe('illegal');
+    expect(result.redFlags[0].statute).toBe('15 U.S.C. § 2302(c) / 16 C.F.R. § 700.10');
+    expect(result.lemonLawInfo.stateName).toBe('New York');
   });
 
-  it('handles clean handoff payloads with high protection scores', () => {
-    const cleanPayload: KtyHandoffPayload = {
-      protocolVersion: '1.0.0',
-      origin: 'extension',
-      destinationTool: 'warranty-watch',
-      domain: 'fair-merchant.example.com',
-      scanTimestamp: '2026-11-10T19:00:00Z',
-      riskScore: 0,
-      summary: 'Clean warranty terms',
-      findings: [],
-    };
-
-    const result = mapHandoffToWarrantyAnalysis(cleanPayload, 'Automotive', 'NY');
-    expect(result.protectionScore).toBe(100);
-    expect(result.redFlags).toHaveLength(0);
-    expect(result.magnusonMossCompliance.isCompliant).toBe(true);
-    expect(result.lemonLawInfo.stateCode).toBe('NY');
-  });
-
-  it('handles edge case with missing riskScore and unknown state fallback safely', () => {
-    const edgePayload: KtyHandoffPayload = {
-      protocolVersion: '1.0.0',
-      origin: 'extension',
-      destinationTool: 'warranty-watch',
-      domain: '<script>alert("xss")</script>.example.com',
-      scanTimestamp: 'invalid-date',
-      riskScore: 0,
-      summary: '',
+  it('does not count WARNING findings toward magnusonMossCompliance.violationsCount', () => {
+    const payload = createValidWarrantyPayload({
+      riskScore: 20,
+      summary: { critical: 0, warning: 1, info: 0 },
       findings: [
         {
-          ruleId: undefined as unknown as string,
-          title: 'Unspecified Notice',
-          statuteCode: '',
-          statuteTitle: '',
-          severity: 'INFO',
+          ruleId: 'KTY-WARRANTY-WARN-001',
+          title: 'Ambiguous Service Window Disclosure',
           category: 'WARRANTY_DISCLAIMER',
-          matchedSnippet: '',
-          explanation: '',
-          recommendation: '',
+          severity: 'WARNING',
+          statuteCode: '15 U.S.C. § 2302',
+          statuteTitle: 'Magnuson-Moss Disclosure Standard',
+          matchedSnippet: 'Service timelines may vary by regional distributor.',
+          explanation: 'Warning-level clarity concern.',
+          recommendation: 'Request written turnaround estimates.',
         },
       ],
-    };
+    });
+    expect(validateHandoffPayload(payload)).toBe(true);
 
-    const result = mapHandoffToWarrantyAnalysis(edgePayload, 'General', 'UNKNOWN');
-    expect(result.protectionScore).toBe(100);
+    const result = mapHandoffToWarrantyAnalysis(payload);
+    expect(result.productType).toBe('General Consumer Product');
+    expect(result.stateCode).toBe('DEFAULT');
+    expect(result.warrantyType).toBe('Unspecified');
     expect(result.redFlags).toHaveLength(1);
-    expect(result.lemonLawInfo).toBeDefined();
+    expect(result.redFlags[0].severity).toBe('deceptive');
+    expect(result.magnusonMossCompliance.violationsCount).toBe(0);
+    expect(result.magnusonMossCompliance.isCompliant).toBe(true);
+  });
+
+  it('sets warrantyType to Disclaimed / As-Is only for blanket disclaimers and excludes qualified coverage exclusions', () => {
+    const excludedDamagePayload = createValidWarrantyPayload({
+      riskScore: 15,
+      summary: { critical: 0, warning: 1, info: 0 },
+      findings: [
+        {
+          ruleId: 'KTY-WARRANTY-EXCL-001',
+          title: 'Accidental Damage Coverage Exclusion (No Warranty Disclaimer Title Test)',
+          category: 'WARRANTY_DISCLAIMER',
+          severity: 'WARNING',
+          statuteCode: '15 U.S.C. § 2302',
+          statuteTitle: 'Magnuson-Moss Disclosure Standard',
+          matchedSnippet: 'There is no warranty coverage for accidental damage.',
+          explanation: 'Coverage exclusions must be conspicuously disclosed.',
+          recommendation: 'Review covered perils in the written limited warranty.',
+        },
+      ],
+    });
+    expect(validateHandoffPayload(excludedDamagePayload)).toBe(true);
+    const exclusionResult = mapHandoffToWarrantyAnalysis(excludedDamagePayload, 'Home Appliances', 'TX');
+    expect(exclusionResult.warrantyType).toBe('Unspecified');
+    expect(exclusionResult.magnusonMossCompliance.violationsCount).toBe(0);
+
+    const payload = createValidWarrantyPayload({
+      riskScore: 60,
+      findings: [
+        {
+          ruleId: 'KTY-WARRANTY-DISCLAIM-001',
+          title: 'Implied Warranty Disclaimed As-Is',
+          category: 'WARRANTY_DISCLAIMER',
+          severity: 'CRITICAL',
+          statuteCode: '15 U.S.C. § 2308',
+          statuteTitle: 'Implied Warranties Limitation',
+          matchedSnippet: 'Product is sold AS IS with all faults and no warranty of merchantability.',
+          explanation: 'Attempted blanket as-is disclaimer of implied warranties.',
+          recommendation: 'Check state UCC § 2-316 restrictions against implied warranty disclaimers.',
+        },
+      ],
+    });
+    expect(validateHandoffPayload(payload)).toBe(true);
+
+    const result = mapHandoffToWarrantyAnalysis(payload, 'Home Appliances', 'TX');
+    expect(result.warrantyType).toBe('Disclaimed / As-Is');
+    expect(result.magnusonMossCompliance.hasImpliedDisclaimer).toBe(true);
+    expect(result.magnusonMossCompliance.violationsCount).toBe(1);
+  });
+
+  it('accepts matching targetTool via useKTYHandoff("warranty-watch") and leaves mismatched targetTool returning null', () => {
+    const matchingPayload = createValidWarrantyPayload({ targetTool: 'warranty-watch' });
+    expect(validateHandoffPayload(matchingPayload)).toBe(true);
+    stubHandoffGlobals(matchingPayload);
+
+    const matched = reactHarness.renderHook(() => useKTYHandoff('warranty-watch'));
+    expect(matched.isHandoffActive).toBe(true);
+    expect(matched.payload?.domain).toBe('megacorp-electronics.com');
+
+    reactHarness.reset();
+    const otherToolPayload = createValidWarrantyPayload({ targetTool: 'lease-audit' });
+    expect(validateHandoffPayload(otherToolPayload)).toBe(true);
+    stubHandoffGlobals(otherToolPayload);
+
+    const mismatched = reactHarness.renderHook(() => useKTYHandoff('warranty-watch'));
+    expect(mismatched.payload).toBeNull();
+    expect(mismatched.isHandoffActive).toBe(false);
   });
 });

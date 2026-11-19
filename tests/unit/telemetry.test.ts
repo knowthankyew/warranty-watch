@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TelemetryManager } from '../../src/legal/telemetry';
 import { terminateOcrWorker, performClientSideOCR } from '../../src/legal/ocr';
+import { runTelemetryInFreshRealm } from './realm-worker.mjs';
 
 const mockTerminate = vi.fn().mockResolvedValue(undefined);
 const mockRecognize = vi.fn();
@@ -68,33 +69,46 @@ describe('WarrantyWatch TelemetryManager & Privacy Invariants', () => {
     expect(attrs.protection_score).toBe(45);
     expect(attrs.warranty_type).toBe('Limited');
 
-    // Non-allowlisted keys are strictly redacted by default
-    expect(attrs.serial_number).toBe('[REDACTED_BY_DEFAULT_ALLOWLIST]');
-    expect(attrs.purchaser_name).toBe('[REDACTED_BY_DEFAULT_ALLOWLIST]');
-    expect(attrs.purchase_price).toBe('[REDACTED_BY_DEFAULT_ALLOWLIST]');
-    expect(attrs.warranty_text).toBe('[REDACTED_BY_DEFAULT_ALLOWLIST]');
-    expect(attrs.matchedText).toBe('[REDACTED_BY_DEFAULT_ALLOWLIST]');
+    // Non-allowlisted keys are strictly redacted by default without retaining key names
+    expect('serial_number' in attrs).toBe(false);
+    expect('purchaser_name' in attrs).toBe(false);
+    expect('purchase_price' in attrs).toBe(false);
+    expect('warranty_text' in attrs).toBe(false);
+    expect('matchedText' in attrs).toBe(false);
+    expect(attrs['[REDACTED_KEY]']).toBe('[REDACTED_BY_DEFAULT_ALLOWLIST]');
   });
 
-  it('purges all in-memory spans and session audit logs upon burn()', () => {
-    const span = tm.startSpan('parse_warranty_card', { product_type: 'Home Appliance' });
-    span.end('OK');
+  it('purges all in-memory spans and session audit logs upon burn()', async () => {
+    await runTelemetryInFreshRealm(`
+      const { TelemetryManager: IsolatedTelemetryManager } = telemetryMod;
+      const isolatedTm = new IsolatedTelemetryManager({
+        mode: 'memory_only',
+        otlpEndpoint: null,
+        burnEnabled: true,
+        allowRawPayloads: false,
+        auditDurable: false,
+        networkEgress: 'deny',
+      });
 
-    tm.recordAuditEvent('document_ingested', 'Ingested warranty card', { state: 'CA' });
+      const span = isolatedTm.startSpan('parse_warranty_card', { product_type: 'Home Appliance' });
+      span.end('OK');
 
-    expect(tm.getMemorySpans().length).toBe(1);
-    expect(tm.getAuditLog().length).toBe(1);
+      isolatedTm.recordAuditEvent('document_ingested', 'Ingested warranty card', { state: 'CA' });
 
-    // Invoke Burn Local Data
-    tm.burn();
+      assert.equal(isolatedTm.getMemorySpans().length, 1);
+      assert.equal(isolatedTm.getAuditLog().length, 1);
 
-    expect(tm.getMemorySpans().length).toBe(0);
-    expect(tm.getAuditLog().length).toBe(0);
+      // Invoke Burn Local Data
+      isolatedTm.burn();
 
-    // Subsequent span attempts remain no-op until restart
-    const spanAfterBurn = tm.startSpan('post_burn_op', { count: 1 });
-    spanAfterBurn.end('OK');
-    expect(tm.getMemorySpans().length).toBe(0);
+      assert.equal(isolatedTm.getMemorySpans().length, 0);
+      assert.equal(isolatedTm.getAuditLog().length, 0);
+
+      // Subsequent span attempts remain permanently no-op within this burned JS realm
+      const spanAfterBurn = isolatedTm.startSpan('post_burn_op', { count: 1 });
+      spanAfterBurn.end('OK');
+      assert.equal(isolatedTm.getMemorySpans().length, 0);
+    `);
   });
 
   it('generates downloadable session audit JSON', () => {

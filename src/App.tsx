@@ -24,6 +24,7 @@ export function App() {
   const [productType, setProductType] = useState<string>(PRODUCT_CATEGORIES[0]);
   const [selectedState, setSelectedState] = useState<string>('CA');
   const [analysisResult, setAnalysisResult] = useState<LegalAnalysisResult | null>(null);
+  const [analysisSource, setAnalysisSource] = useState<'handoff' | 'text' | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'redflags' | 'coverage' | 'lemonlaw' | 'dispute'>('overview');
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
   const [showSourcesModal, setShowSourcesModal] = useState<boolean>(false);
@@ -31,20 +32,26 @@ export function App() {
 
   const claims = telemetry.getPrivacyClaims();
   const { payload: handoffPayload, isHandoffActive, clearHandoff } = useKTYHandoff('warranty-watch');
-  const handledPayloadRef = useRef<unknown>(null);
+  const handledPayloadRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (handoffPayload && handledPayloadRef.current !== handoffPayload) {
-      handledPayloadRef.current = handoffPayload;
+    const handoffKey = handoffPayload ? `${handoffPayload.scanTimestamp}:${handoffPayload.findings.length}` : null;
+    if (handoffPayload && handoffKey && handledPayloadRef.current !== handoffKey) {
+      handledPayloadRef.current = handoffKey;
       const result = mapHandoffToWarrantyAnalysis(handoffPayload, productType, selectedState);
       setAnalysisResult(result);
+      setAnalysisSource('handoff');
       setActiveTab('overview');
       telemetry.recordAuditEvent('handoff_received', 'Received cross-engine handoff', {
-        findings_count: handoffPayload.findings.length,
-        risk_score: handoffPayload.riskScore,
+        redflag_count: result.redFlags.length,
+        protection_score: result.protectionScore,
+        violations_count: result.magnusonMossCompliance.violationsCount,
+        is_compliant: result.magnusonMossCompliance.isCompliant,
+        state: selectedState,
       });
     }
-  }, [handoffPayload, productType, selectedState]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handoffPayload]);
 
   // Trigger Legal Analysis
   const handleAnalyze = () => {
@@ -65,6 +72,7 @@ export function App() {
       is_compliant: result.magnusonMossCompliance.isCompliant,
     });
     setAnalysisResult(result);
+    setAnalysisSource('text');
     setActiveTab('overview');
   };
 
@@ -95,13 +103,18 @@ export function App() {
       is_compliant: result.magnusonMossCompliance.isCompliant,
     });
     setAnalysisResult(result);
+    setAnalysisSource('text');
     setActiveTab('overview');
   };
 
   // State Change update
   const handleStateChange = (newState: string) => {
     setSelectedState(newState);
-    if (inputText.trim()) {
+    if (analysisSource === 'handoff' && isHandoffActive && handoffPayload) {
+      setAnalysisResult(mapHandoffToWarrantyAnalysis(handoffPayload, productType, newState));
+      return;
+    }
+    if (inputText.trim() && (analysisSource === 'text' || analysisSource === null)) {
       const span = telemetry.startSpan('analyze_warranty', { product_type: productType, state: newState, char_count: inputText.length });
       const result = analyzeWarrantyText(inputText, productType, newState);
       span.end('OK', {
@@ -111,12 +124,14 @@ export function App() {
         is_compliant: result.magnusonMossCompliance.isCompliant,
       });
       setAnalysisResult(result);
+      setAnalysisSource('text');
     }
   };
 
   const handleReset = () => {
     telemetry.restartSession();
     setAnalysisResult(null);
+    setAnalysisSource(null);
     setInputText('');
   };
 
@@ -184,6 +199,7 @@ export function App() {
     }
 
     setAnalysisResult(null);
+    setAnalysisSource(null);
     setInputText('');
     setActiveTab('overview');
   };
@@ -228,6 +244,7 @@ export function App() {
               clearHandoff();
               handledPayloadRef.current = null;
               setAnalysisResult(null);
+              setAnalysisSource(null);
             }}
           />
         )}
